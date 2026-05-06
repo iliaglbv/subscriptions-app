@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: '1'
+      POSTGRES_DB: subscriptions_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d subscriptions_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks: [appnet]
+
+  app:
+    build: .
+    # Загружаем ваш .env "как есть"
+    env_file: [.env]
+    # Переопределяем только DSN: localhost → db (перезапишет значение из .env)
+    environment:
+      DATABASE_DSN: postgres://postgres:1@db:5432/subscriptions_db?sslmode=disable
+    depends_on:
+      db: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [appnet]
+  nginx:
+    image: nginx:alpine
+    ports: ["8081:8081"]  # ← теперь порт пробрасываем здесь
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/frontend:ro  # монтируем фронтенд напрямую
+    depends_on: [app]
+    networks: [appnet]
+volumes: { pgdata: }
+networks: { appnet: }
