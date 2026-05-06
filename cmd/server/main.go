@@ -43,14 +43,13 @@ func main() {
 	authHandler := handlers.NewAuthHandler(userRepo, validator, cfg.JWTSecret, 24*time.Hour)
 	subHandler := handlers.NewSubscriptionHandler(subRepo, validator)
 
-	// === 1. СОЗДАЁМ РОУТЕР ===
+	// === СОЗДАЁМ РОУТЕР ===
 	r := chi.NewRouter()
 
 	// Middleware от chi
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
-	// === 2. РЕГИСТРИРУЕМ ВСЕ РОУТЫ ===
 	r.Get("/health", healthHandler.Check)
 	r.Post("/api/register", authHandler.Register)
 	r.Post("/api/login", authHandler.Login)
@@ -70,23 +69,21 @@ func main() {
 		r.Get("/stats", subHandler.GetStats)
 	})
 
-	// === 3. CORS MIDDLEWARE (ПОСЛЕ всех роутов!) ===
 	corsMiddleware := cors.New(cors.Options{
 		AllowedOrigins: []string{
-			"*", // ← ВРЕМЕННО "*" для отладки!
+			"*",
 		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 		MaxAge:           300,
-		Debug:            true, // ← ВКЛЮЧИТЕ ЛОГИРОВАНИЕ!
+		Debug:            true,
 	})
 
-	// === 4. ОБОРАЧИВАЕМ РОУТЕР ===
+	// === 2. ОБОРАЧИВАЕМ РОУТЕР ===
 	handler := corsMiddleware.Handler(r)
 
-	// === 5. ЗАПУСКАЕМ С handler, НЕ С r! ===
-	log.Printf("🚀 Server starting on %s", cfg.ServerAddr)
+	log.Printf("Server starting on %s", cfg.ServerAddr)
 	if err := http.ListenAndServe(cfg.ServerAddr, handler); err != nil { // ← handler, НЕ r!
 		log.Fatalf("Server failed: %v", err)
 	}
